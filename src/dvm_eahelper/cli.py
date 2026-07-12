@@ -7,11 +7,26 @@ Usage
 
 Commands
 --------
-    proxy       Start the GraphQL proxy server
+    server      Run the integrated server: GraphQL proxy + MCP endpoint (+ start|stop|status)
+    proxy       Start the standalone GraphQL proxy server (legacy; prefer 'server')
     diagnose    Test SSL/TLS connectivity to LeanIX and recommend fixes
     download    Download all FactSheets of a type from LeanIX via the proxy
     load        Load downloaded data into the graph database
     seed        Seed the graph database
+    mcp         Run the MCP server over stdio
+    mcp-config  Print/install MCP client config for Claude Code / VS Code
+    config      View or edit ~/.eahelper/config.toml
+
+Agent skill
+-----------
+An installable Agent Skill (Claude Code, GitHub Copilot, and other
+agentskills.io-compatible agents) that walks you through setup and usage:
+
+    git clone https://github.com/divyavanmahajan/dvm-eahelper-skills
+    # Claude Code:      cp -R dvm-eahelper-skills/skills/eahelper ~/.claude/skills/eahelper
+    # GitHub Copilot:   cp -R dvm-eahelper-skills/skills/eahelper ~/.copilot/skills/eahelper
+
+Then restart your agent so it picks up the skill.
 """
 
 from __future__ import annotations

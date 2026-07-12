@@ -123,6 +123,33 @@ An installable Agent Skill (Claude Code, GitHub Copilot, and other
 setup and usage lives at
 [dvm-eahelper-skills](https://github.com/divyavanmahajan/dvm-eahelper-skills).
 
+To install it, clone that repo and copy the skill folder into your agent's skills directory:
+
+```bash
+git clone https://github.com/divyavanmahajan/dvm-eahelper-skills
+cd dvm-eahelper-skills
+
+# Claude Code — personal (all projects)
+mkdir -p ~/.claude/skills && cp -R skills/eahelper ~/.claude/skills/eahelper
+
+# Claude Code — this project only
+mkdir -p .claude/skills && cp -R skills/eahelper .claude/skills/eahelper
+
+# GitHub Copilot — personal (all projects)
+mkdir -p ~/.copilot/skills && cp -R skills/eahelper ~/.copilot/skills/eahelper
+
+# GitHub Copilot — this repo only
+mkdir -p .github/skills && cp -R skills/eahelper .github/skills/eahelper
+```
+
+```powershell
+# Windows (PowerShell), e.g. Claude Code personal:
+New-Item -ItemType Directory -Force "$HOME\.claude\skills" | Out-Null
+Copy-Item -Recurse skills\eahelper "$HOME\.claude\skills\eahelper"
+```
+
+Then restart your agent (or start a new session) so it picks up the skill.
+
 ## Migrating from dvm-leanix / dvm-eagraph
 
 | Old | New |
