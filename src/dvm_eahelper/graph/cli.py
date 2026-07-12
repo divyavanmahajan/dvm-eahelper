@@ -129,6 +129,15 @@ def _run_load(args: argparse.Namespace) -> None:
 
     ssl_verify = False if args.no_verify_ssl else make_ssl_context()
 
+    if not args.skip_download:
+        from dvm_eahelper.server.autostart import ensure_server_running
+
+        try:
+            ensure_server_running()
+        except RuntimeError as exc:
+            print(f"  ERROR: {exc}")
+            sys.exit(1)
+
     if args.generate_mapping:
         from dvm_eahelper.graph.discover import generate_mapping_file
 

@@ -3,7 +3,7 @@ Extract a Bearer token from a logged-in LeanIX browser session via Playwright CD
 
 Usage:
     1. Launch Chrome/Edge with remote debugging enabled:
-       chrome.exe --remote-debugging-port=9222 --user-data-dir=C:\\Temp\\chrome-debug
+       chrome.exe --remote-debugging-port=19222 --user-data-dir=C:\\Temp\\chrome-debug
     2. Log in to LeanIX in that browser window.
     3. Run this module to extract the active access token.
 """
@@ -16,7 +16,7 @@ import re
 import httpx
 from playwright.async_api import Browser, BrowserContext, async_playwright
 
-CDP_URL = "http://localhost:9222"
+CDP_URL = "http://localhost:19222"
 _TOKEN_PATTERN = re.compile(r"^Bearer (.+)$")
 
 
@@ -129,7 +129,7 @@ async def extract_token(leanix_base: str, cdp_url: str = CDP_URL) -> str:
     Args:
         leanix_base: Base URL of the LeanIX workspace,
                      e.g. "https://eu-10.leanix.net/YourInstance"
-        cdp_url:     Chrome DevTools Protocol endpoint, default "http://localhost:9222"
+        cdp_url:     Chrome DevTools Protocol endpoint, default "http://localhost:19222"
 
     Returns:
         The raw Bearer token string.
@@ -153,13 +153,13 @@ async def extract_token(leanix_base: str, cdp_url: str = CDP_URL) -> str:
                 "isolated instance that coexists with your normal browser session:\n"
                 "\n"
                 '  Start-Process "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" `\n'
-                '    "--remote-debugging-port=9222 --user-data-dir=C:\\Temp\\edge-debug `\n'
+                '    "--remote-debugging-port=19222 --user-data-dir=C:\\Temp\\edge-debug `\n'
                 '     --no-first-run --no-default-browser-check"\n'
                 "\n"
                 "Then log in to LeanIX in that new window and re-run eahelper.\n"
                 "\n"
                 "To verify the debug port is active before retrying:\n"
-                "  Invoke-RestMethod http://localhost:9222/json/version\n"
+                "  Invoke-RestMethod http://localhost:19222/json/version\n"
                 "\n"
                 f"Original error: {exc}"
             ) from exc

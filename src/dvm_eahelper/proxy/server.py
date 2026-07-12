@@ -31,21 +31,25 @@ from .graphiql import GRAPHIQL_HTML
 # --------------------------------------------------------------------------- #
 
 def build_app(
-    leanix_base: str,
-    initial_token: str,
+    leanix_base: str | None,
+    initial_token: str | None,
     cdp_url: str | None = None,
     ssl_verify: bool | str | _ssl_module.SSLContext = True,
     api_key: str | None = None,
+    lifespan=None,
 ) -> FastAPI:
     """
     Create the FastAPI proxy application.
 
     Args:
         leanix_base:   LeanIX workspace base URL,
-                       e.g. "https://eu-10.leanix.net/YourInstance"
+                       e.g. "https://eu-10.leanix.net/YourInstance". May be None/empty
+                       if no workspace/token is configured yet (e.g. supervisor startup
+                       before a token has been captured) — /graphql then returns 503.
         initial_token: Bearer token obtained from the browser session or OAuth2 exchange.
+                       May be None if not yet available.
         cdp_url:       Chrome DevTools Protocol endpoint for auto-refresh via browser,
-                       e.g. "http://localhost:9222". Pass None to disable browser refresh.
+                       e.g. "http://localhost:19222". Pass None to disable browser refresh.
         ssl_verify:    SSL verification mode for upstream requests:
                        True            = verify using system/certifi CA bundle (default)
                        False           = disable verification entirely (insecure)
@@ -53,9 +57,12 @@ def build_app(
                        ssl.SSLContext  = pre-configured context (e.g. legacy mode)
         api_key:       LeanIX Technical User API key. When provided, token auto-refresh
                        uses OAuth2 client-credentials instead of the browser CDP.
+        lifespan:      Optional ASGI lifespan context manager, e.g. to integrate an
+                       embedded MCP server's session manager when this app is used
+                       as part of a larger supervisor app.
     """
-    host_part = "/".join(leanix_base.split("/")[:3])  # https://eu-10.leanix.net
-    graphql_upstream = f"{host_part}/services/pathfinder/v1/graphql"
+    host_part = "/".join(leanix_base.split("/")[:3]) if leanix_base else None
+    graphql_upstream = f"{host_part}/services/pathfinder/v1/graphql" if host_part else None
 
     # Thread-safe mutable token state
     _lock = threading.Lock()
@@ -81,6 +88,7 @@ def build_app(
             f"Upstream: `{graphql_upstream}`"
         ),
         version="0.1.0",
+        lifespan=lifespan,
     )
 
     app.add_middleware(
@@ -183,7 +191,12 @@ def build_app(
             "upstream": graphql_upstream,
             "cdp_connected": cdp_url is not None,
             "ssl_verify": ssl_mode,
+            "has_token": get_token() is not None,
         }
+
+    @app.get("/healthz", include_in_schema=False)
+    async def healthz():
+        return {"status": "ok"}
 
     # ------------------------------------------------------------------ #
     # Token management                                                     #
@@ -192,6 +205,8 @@ def build_app(
     @app.get("/token", summary="Show current token (masked)")
     async def show_token():
         tok = get_token()
+        if not tok:
+            return {"token_preview": None, "length": 0}
         masked = tok[:8] + "…" + tok[-4:] if len(tok) > 12 else "****"
         return {"token_preview": masked, "length": len(tok)}
 
@@ -230,7 +245,7 @@ def build_app(
                 status_code=502,
                 detail=(
                     "Could not re-extract token from browser. "
-                    "Ensure Chrome is running with --remote-debugging-port=9222 "
+                    "Ensure Chrome is running with --remote-debugging-port=19222 "
                     "and you are logged in to LeanIX."
                 ),
             )
@@ -257,6 +272,15 @@ def build_app(
         re-extract a fresh token from the connected browser (if `--connect`
         was provided) and retry the request once.
         """
+        if not graphql_upstream or not get_token():
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "No LeanIX token available yet. POST /token with a Bearer token, "
+                    "or POST /token/refresh to capture one from the browser."
+                ),
+            )
+
         body_bytes = await request.body()
         try:
             body_json: dict[str, Any] = json.loads(body_bytes)

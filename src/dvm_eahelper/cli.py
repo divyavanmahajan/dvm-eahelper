@@ -24,7 +24,7 @@ from pathlib import Path
 
 DEFAULT_URL = "https://eu-10.leanix.net/YourInstance"
 DEFAULT_PORT = 8765
-DEFAULT_CDP = "http://localhost:9222"
+DEFAULT_CDP = "http://localhost:19222"
 
 
 def _prompt(prompt_text: str, default: str) -> str:
@@ -225,6 +225,36 @@ def _add_download_subcommand(subparsers: argparse._SubParsersAction) -> None:
     dl.set_defaults(func=_run_download)
 
 
+def _add_mcp_subcommand(subparsers: argparse._SubParsersAction) -> None:
+    mcp_p = subparsers.add_parser(
+        "mcp",
+        help="Run the MCP server over stdio (for harnesses that spawn a subprocess)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    mcp_p.add_argument(
+        "--read-only",
+        action="store_true",
+        default=None,
+        help="Reject write Cypher queries via the query tool",
+    )
+    mcp_p.set_defaults(func=_run_mcp)
+
+
+def _add_mcp_config_subcommand(subparsers: argparse._SubParsersAction) -> None:
+    mcp_cfg = subparsers.add_parser(
+        "mcp-config",
+        help="Print (or install) MCP config snippets for Claude Code / VS Code",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    mcp_cfg.add_argument(
+        "--install",
+        action="store_true",
+        default=False,
+        help="Write/merge .mcp.json and .vscode/mcp.json in the current directory",
+    )
+    mcp_cfg.set_defaults(func=_run_mcp_config)
+
+
 def _stub_graph_subcommands(subparsers: argparse._SubParsersAction) -> None:
     def _missing(_args: argparse.Namespace) -> None:
         print(
@@ -274,6 +304,14 @@ def build_parser() -> argparse.ArgumentParser:
     _add_proxy_subcommand(subparsers)
     _add_diagnose_subcommand(subparsers)
     _add_download_subcommand(subparsers)
+    _add_mcp_subcommand(subparsers)
+    _add_mcp_config_subcommand(subparsers)
+
+    from dvm_eahelper.config_cli import register as register_config
+    register_config(subparsers)
+
+    from dvm_eahelper.server_cli import register as register_server
+    register_server(subparsers)
 
     try:
         from dvm_eahelper.graph.cli import register_subcommands
@@ -347,7 +385,7 @@ def _extract_from_browser(leanix_url: str, cdp_url: str) -> str:
     print(
         "\nConnecting to browser to extract Bearer token…\n"
         "  Make sure Chrome/Edge is running with:\n"
-        "    chrome.exe --remote-debugging-port=9222 --user-data-dir=C:\\Temp\\chrome-debug\n"
+        "    chrome.exe --remote-debugging-port=19222 --user-data-dir=C:\\Temp\\chrome-debug\n"
         "  and that you are already logged in to LeanIX.\n"
     )
     from dvm_eahelper.proxy.token import get_token_sync
@@ -364,7 +402,25 @@ def _run_diagnose(args: argparse.Namespace) -> None:
     run_diagnostics(url.rstrip("/"), ca_bundle=args.ca_bundle)
 
 
+def _run_mcp(args: argparse.Namespace) -> None:
+    from dvm_eahelper.mcp_server import run_stdio
+    run_stdio(read_only=args.read_only)
+
+
+def _run_mcp_config(args: argparse.Namespace) -> None:
+    from dvm_eahelper.mcp_config import run_mcp_config
+    run_mcp_config(install=args.install)
+
+
 def _run_download(args: argparse.Namespace) -> None:
+    from dvm_eahelper.server.autostart import ensure_server_running
+
+    try:
+        ensure_server_running()
+    except RuntimeError as exc:
+        print(f"  ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
+
     ssl_verify = _resolve_ssl(args)
     limit = getattr(args, "limit", None)
     if getattr(args, "relations", False) or getattr(args, "list_relations", False):

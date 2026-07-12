@@ -70,8 +70,9 @@ def clean_props(record: dict) -> dict:
 class KuzuBackend(GraphBackend):
     """Loads LeanIX factsheets/relationships into an embedded KuzuDB database."""
 
-    def __init__(self, db_path: str | Path | None = None) -> None:
+    def __init__(self, db_path: str | Path | None = None, read_only: bool = False) -> None:
         self.db_path = Path(db_path) if db_path else DEFAULT_DB_PATH
+        self.read_only = read_only
         self.db: kuzu.Database | None = None
         self.conn: kuzu.Connection | None = None
         self._node_columns: dict[str, set[str]] = {}
@@ -79,7 +80,15 @@ class KuzuBackend(GraphBackend):
 
     def connect(self) -> None:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.db = kuzu.Database(str(self.db_path))
+        try:
+            self.db = kuzu.Database(str(self.db_path), read_only=self.read_only)
+        except RuntimeError as exc:
+            raise RuntimeError(
+                f"Could not open KuzuDB at {self.db_path}: {exc}. "
+                "KuzuDB is single-writer/embedded — this usually means another "
+                "eahelper process (server, load, or mcp) already has this database "
+                "open. Stop it first, or point --db-path at a different directory."
+            ) from exc
         self.conn = kuzu.Connection(self.db)
         self._load_existing_schema()
 
@@ -261,3 +270,9 @@ class KuzuBackend(GraphBackend):
             self.conn.execute(f"MATCH ()-[r:{rel_type}]->() DELETE r")
         for label in list(self._node_columns):
             self.conn.execute(f"MATCH (n:{label}) DELETE n")
+
+    def get_schema(self) -> dict:
+        return {
+            "node_tables": {label: sorted(cols) for label, cols in self._node_columns.items()},
+            "relationship_types": sorted(self._rel_pairs.keys()),
+        }

@@ -79,3 +79,10 @@ class GraphBackend(ABC):
     @abstractmethod
     def clear(self) -> None:
         """Delete all nodes and relationships in the database."""
+
+    @abstractmethod
+    def get_schema(self) -> dict:
+        """Return a JSON-serialisable description of node/relationship schema.
+
+        Shape: {"node_tables": {label: [prop, ...]}, "relationship_types": [rel_type, ...]}
+        """

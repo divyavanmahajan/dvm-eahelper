@@ -148,3 +148,21 @@ class Neo4jBackend(GraphBackend):
     def clear(self) -> None:
         with self.driver.session() as session:
             session.execute_write(lambda tx: tx.run("MATCH (n) DETACH DELETE n"))
+
+    def get_schema(self) -> dict:
+        node_tables: dict[str, list[str]] = {}
+        rel_types: set[str] = set()
+        with self.driver.session() as session:
+            result = session.run(
+                "CALL db.schema.nodeTypeProperties() "
+                "YIELD nodeLabels, propertyName "
+                "RETURN nodeLabels, collect(DISTINCT propertyName) AS props"
+            )
+            for row in result:
+                for label in row["nodeLabels"]:
+                    node_tables.setdefault(label, [])
+                    node_tables[label] = sorted(set(node_tables[label]) | set(row["props"] or []))
+            rel_result = session.run("CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType")
+            for row in rel_result:
+                rel_types.add(row["relationshipType"])
+        return {"node_tables": node_tables, "relationship_types": sorted(rel_types)}
