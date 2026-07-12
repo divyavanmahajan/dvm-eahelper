@@ -16,9 +16,12 @@ Works on **Windows** and **macOS**.
 
 ## Installation
 
+Requires Python 3.11–3.13. **Use Python 3.13, not 3.14** — KuzuDB does not yet
+publish Windows wheels for 3.14, so installation fails there on newer Pythons.
+
 ```bash
-uv tool install dvm-eahelper        # or: pip install dvm-eahelper
-uvx playwright install chromium     # one-time, for the proxy
+uv tool install --python 3.13 dvm-eahelper   # or: pip install dvm-eahelper (on a 3.13 interpreter)
+uvx playwright install chromium              # one-time, for the proxy
 ```
 
 ## Quick start
