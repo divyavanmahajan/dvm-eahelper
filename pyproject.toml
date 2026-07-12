@@ -1,0 +1,69 @@
+[project]
+name = "dvm-eahelper"
+dynamic = ["version"]
+description = "LeanIX enterprise-architecture helper: GraphQL proxy, factsheet download, and graph loading into KuzuDB or Neo4j"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Divya Van Mahajan", email = "divyavanmahajan@users.noreply.github.com" },
+]
+keywords = ["leanix", "graphql", "kuzu", "neo4j", "enterprise-architecture"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "httpx>=0.27",
+    "playwright>=1.49",
+    "kuzu>=0.7",
+    "neo4j>=5.0",
+    "python-dotenv>=1.0",
+    "pyyaml>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/divyavanmahajan/dvm-eahelper"
+Source = "https://github.com/divyavanmahajan/dvm-eahelper"
+"Bug Tracker" = "https://github.com/divyavanmahajan/dvm-eahelper/issues"
+
+[project.scripts]
+eahelper = "dvm_eahelper.cli:main"
+dvm-eahelper = "dvm_eahelper.cli:main"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/dvm_eahelper/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dvm_eahelper"]
+
+[dependency-groups]
+dev = ["ruff>=0.9"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+ignore = ["E501"]
