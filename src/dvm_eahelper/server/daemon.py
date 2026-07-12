@@ -115,6 +115,10 @@ def start(
     while time.monotonic() < deadline:
         if is_server_healthy(resolved_port):
             print(f"  eahelper server healthy on http://127.0.0.1:{resolved_port}")
+            from dvm_eahelper.server.supervisor import data_locations
+
+            for line in data_locations():
+                print(f"    {line}")
             return
         time.sleep(0.5)
 

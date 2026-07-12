@@ -118,6 +118,22 @@ def _bundled_mapping() -> Path | None:
     return p if p.exists() else None
 
 
+def resolve_mapping_path(mapping_arg: str | None = None) -> tuple[Path | None, str]:
+    """Return (path, source) for the mapping file resolve_mapping() would use.
+
+    ``path`` is None when built-in defaults apply. ``source`` is a short label:
+    "--mapping flag", "local file", "bundled default", or "built-in defaults".
+    """
+    if mapping_arg:
+        return Path(mapping_arg), "--mapping flag"
+    if DEFAULT_MAPPING_FILE.exists():
+        return DEFAULT_MAPPING_FILE.resolve(), "local file"
+    bundled = _bundled_mapping()
+    if bundled is not None:
+        return bundled, "bundled default"
+    return None, "built-in defaults"
+
+
 def resolve_mapping(mapping_arg: str | None) -> tuple[list[str], dict[str, str], dict[str, list[str]]]:
     """Return (factsheet_types, relation_map, subtype_map) from a mapping file or built-in defaults.
 

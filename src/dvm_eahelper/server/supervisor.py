@@ -103,6 +103,32 @@ def build_supervisor_app(
     return app
 
 
+def data_locations() -> list[str]:
+    """Human-readable locations of the mapping file, graph database, and JSON data dir."""
+    from pathlib import Path
+
+    from dvm_eahelper.graph.loader import DEFAULT_DATA_DIR, resolve_mapping_path
+
+    mapping_path, mapping_src = resolve_mapping_path(None)
+    mapping_desc = f"{mapping_path} ({mapping_src})" if mapping_path else mapping_src
+
+    db_choice = (get_setting("graph", "db", env_var="EAHELPER_DB", default="kuzu") or "kuzu").lower()
+    if db_choice == "neo4j":
+        uri = get_setting("neo4j", "uri", env_var="NEO4J_URI", default="bolt://localhost:7687")
+        db_desc = f"neo4j at {uri}"
+    else:
+        from dvm_eahelper.graph.kuzu_backend import DEFAULT_DB_PATH
+
+        kuzu_path = get_setting("graph", "kuzu_path", env_var="EAHELPER_KUZU_PATH", default="")
+        db_desc = f"kuzu at {Path(kuzu_path or DEFAULT_DB_PATH).resolve()}"
+
+    return [
+        f"Mapping file     → {mapping_desc}",
+        f"Graph database   → {db_desc}",
+        f"JSON data dir    → {DEFAULT_DATA_DIR.resolve()}",
+    ]
+
+
 def run_foreground(
     proxy_port: int | None = None,
     leanix_url: str | None = None,
@@ -131,11 +157,13 @@ def run_foreground(
     )
 
     host = "127.0.0.1"
+    locations = "\n".join(f"    {line}" for line in data_locations())
     print(
         f"\n  eahelper server running on http://{host}:{port}\n"
         f"    GraphQL proxy    → http://{host}:{port}/graphql\n"
         f"    Health check     → http://{host}:{port}/healthz\n"
         f"    MCP endpoint     → http://{host}:{port}/mcp\n"
+        f"{locations}\n"
         "\nPress Ctrl+C to stop.\n"
     )
 
