@@ -180,9 +180,12 @@ class KuzuBackend(GraphBackend):
         all_cols.discard("id")
         self._ensure_node_columns(label, all_cols)
 
-        for row in rows:
-            for col in all_cols:
-                row.setdefault(col, None)
+        # Kuzu structs are field-order-sensitive and all-None fields infer as
+        # ANY (incompatible with STRING columns): drop all-None columns and
+        # rebuild every row with one canonical key order.
+        all_cols = {c for c in all_cols if any(row.get(c) is not None for row in rows)}
+        cols = ["id", *sorted(all_cols)]
+        rows = [{c: row.get(c) for c in cols} for row in rows]
 
         set_clause = ", ".join(f"n.{c} = row.{c}" for c in sorted(all_cols))
         query = f"UNWIND $rows AS row MERGE (n:{label} {{id: row.id}})"

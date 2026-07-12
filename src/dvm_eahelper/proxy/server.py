@@ -91,6 +91,8 @@ def build_app(
         lifespan=lifespan,
     )
 
+    app.state.set_token = set_token
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

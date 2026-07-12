@@ -60,21 +60,35 @@ def build_supervisor_app(
     initial_token: str | None = None
     if leanix_url:
         initial_token = load_token(leanix_url)
-        if not initial_token and not api_key:
-            print("  No cached LeanIX token — will capture on first use via managed browser.")
-            initial_token = _capture_token_via_browser(leanix_url, keep_browser)
-            if initial_token:
-                from dvm_eahelper.proxy.persistence import save_token
-
-                save_token(leanix_url, initial_token)
 
     mcp = create_mcp_server(read_only=mcp_read_only)
     mcp_asgi_app = mcp.streamable_http_app()
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
+        import asyncio
+
+        capture_task = None
+        if leanix_url and not initial_token and not api_key:
+
+            async def _bootstrap_token():
+                print("  No cached LeanIX token — capturing in the background via managed browser.")
+                token = await asyncio.to_thread(_capture_token_via_browser, leanix_url, keep_browser)
+                if token:
+                    from dvm_eahelper.proxy.persistence import save_token
+
+                    save_token(leanix_url, token)
+                    app.state.set_token(token)
+
+            capture_task = asyncio.create_task(_bootstrap_token())
+
         async with mcp.session_manager.run():
             yield
+
+        if capture_task and not capture_task.done():
+            capture_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await capture_task
 
     app = build_app(
         leanix_url,
