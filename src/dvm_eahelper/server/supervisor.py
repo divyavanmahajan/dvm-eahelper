@@ -156,10 +156,12 @@ def run_foreground(
         mcp_read_only=mcp_read_only,
     )
 
+    from dvm_eahelper import __version__
+
     host = "127.0.0.1"
     locations = "\n".join(f"    {line}" for line in data_locations())
     print(
-        f"\n  eahelper server running on http://{host}:{port}\n"
+        f"\n  eahelper server v{__version__} running on http://{host}:{port}\n"
         f"    GraphQL proxy    → http://{host}:{port}/graphql\n"
         f"    Health check     → http://{host}:{port}/healthz\n"
         f"    MCP endpoint     → http://{host}:{port}/mcp\n"

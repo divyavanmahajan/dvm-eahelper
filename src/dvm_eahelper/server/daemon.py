@@ -109,7 +109,12 @@ def start(
             **_spawn_kwargs(),
         )
         pid_file().write_text(str(proc.pid), encoding="utf-8")
-        print(f"  Starting eahelper server (pid {proc.pid}) on port {resolved_port}, logging to {log_file()}...")
+        from dvm_eahelper import __version__
+
+        print(
+            f"  Starting eahelper server v{__version__} (pid {proc.pid}) on port {resolved_port}, "
+            f"logging to {log_file()}..."
+        )
 
     deadline = time.monotonic() + wait_timeout
     while time.monotonic() < deadline:
@@ -160,6 +165,9 @@ def status(port: int | None = None) -> None:
     alive = pid is not None and _is_process_alive(pid)
     healthy = is_server_healthy(resolved_port)
 
+    from dvm_eahelper import __version__
+
+    print(f"  version          : {__version__}")
     print(f"  pidfile          : {pid_file()}")
     print(f"  pid              : {pid if pid is not None else '(none)'}")
     print(f"  process alive    : {alive}")
