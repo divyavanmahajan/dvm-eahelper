@@ -17,6 +17,30 @@ Commands
     mcp-config  Print/install MCP client config for Claude Code / VS Code
     config      View or edit ~/.eahelper/config.toml
 
+End-to-end walkthrough
+----------------------
+Start with `eahelper server`, which runs the LeanIX GraphQL proxy and the MCP
+endpoint in one process; on first run it asks for your workspace URL, then
+opens a managed Chrome window where you log in to LeanIX so it can capture a
+Bearer token for you. With the server up, pull your data down with
+`eahelper download --type Application` (add `--list-types` first if you want to
+see what your workspace exposes), which writes JSON into `data/leanix`. Then run
+`eahelper load`, which imports those factsheets and their relationships into an
+embedded KuzuDB graph so applications, IT components and business capabilities
+become queryable as a connected graph rather than flat exports. Run
+`eahelper mcp-config --install` in your project to write `.vscode/mcp.json`
+(and `.mcp.json` for Claude Code), then reload VS Code so GitHub Copilot picks
+the server up. Copilot now has two tools, `get_schema` and `query`: it calls
+`get_schema` to learn your node tables and relationship types, then `query` to
+run Cypher against the graph, so you can ask things like which applications
+support a given business capability and get answers grounded in your real
+workspace. The HTTP entry (`http://localhost:8765/mcp`) needs `eahelper server`
+running, while the stdio entry spawns its own process on demand — prefer the
+stdio one if you would rather not keep a server alive. Set
+`[graph].mcp_read_only = true` in `~/.eahelper/config.toml` (or pass
+`--mcp-read-only`) to stop an agent from writing to the graph. Re-run
+`eahelper download` and `eahelper load` whenever you want to refresh the data.
+
 Agent skill
 -----------
 An installable Agent Skill (Claude Code, GitHub Copilot, and other
@@ -399,7 +423,7 @@ def _extract_from_browser(leanix_url: str, cdp_url: str) -> str:
     print(f"  CDP endpoint     : {cdp_url}")
     print(
         "\nConnecting to browser to extract Bearer token…\n"
-        "  Make sure Chrome/Edge is running with:\n"
+        "  Make sure Chrome is running with:\n"
         "    chrome.exe --remote-debugging-port=19222 --user-data-dir=C:\\Temp\\chrome-debug\n"
         "  and that you are already logged in to LeanIX.\n"
     )
