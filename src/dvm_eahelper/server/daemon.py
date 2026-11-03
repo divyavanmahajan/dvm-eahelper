@@ -7,6 +7,7 @@ Log:     ~/.eahelper/server.log
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import time
@@ -33,14 +34,45 @@ def _spawn_kwargs() -> dict:
     return {"start_new_session": True, "close_fds": True}
 
 
-def _read_pid() -> int | None:
+def _read_state() -> tuple[int | None, int | None]:
+    """
+    Read (pid, port) from the pidfile.
+
+    Current format is JSON; a bare integer is accepted so a pidfile written by
+    an older version still stops cleanly (its port is simply unknown).
+    """
     f = pid_file()
     if not f.exists():
-        return None
+        return None, None
     try:
-        return int(f.read_text(encoding="utf-8").strip())
-    except (ValueError, OSError):
-        return None
+        raw = f.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None, None
+
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return None, None
+
+    # A legacy pidfile holds a bare pid, which is itself valid JSON.
+    if isinstance(data, int):
+        return data, None
+    if not isinstance(data, dict):
+        return None, None
+    pid = data.get("pid")
+    port = data.get("port")
+    return (
+        pid if isinstance(pid, int) else None,
+        port if isinstance(port, int) else None,
+    )
+
+
+def _write_state(pid: int, port: int) -> None:
+    pid_file().write_text(json.dumps({"pid": pid, "port": port}), encoding="utf-8")
+
+
+def _read_pid() -> int | None:
+    return _read_state()[0]
 
 
 def _is_process_alive(pid: int) -> bool:
@@ -96,8 +128,9 @@ def start(
             args.append("--keep-browser")
         if mcp_read_only:
             args.append("--mcp-read-only")
-        if port:
-            args += ["--port", str(port)]
+        # Always pass the resolved port so the child cannot re-resolve to a
+        # different one (changed config/env) than the port we health-check.
+        args += ["--port", str(resolved_port)]
 
         config_dir().mkdir(parents=True, exist_ok=True)
         log = log_file().open("a", encoding="utf-8")
@@ -108,7 +141,7 @@ def start(
             stderr=subprocess.STDOUT,
             **_spawn_kwargs(),
         )
-        pid_file().write_text(str(proc.pid), encoding="utf-8")
+        _write_state(proc.pid, resolved_port)
         from dvm_eahelper import __version__
 
         print(
@@ -160,8 +193,15 @@ def stop() -> None:
 
 
 def status(port: int | None = None) -> None:
-    resolved_port = resolve_port(port)
-    pid = _read_pid()
+    pid, recorded_port = _read_state()
+    # Report on the port the running daemon actually bound: an explicit --port
+    # wins, then the port recorded at start, and only then the config default.
+    if port is not None:
+        resolved_port = resolve_port(port)
+    elif recorded_port is not None:
+        resolved_port = recorded_port
+    else:
+        resolved_port = resolve_port(None)
     alive = pid is not None and _is_process_alive(pid)
     healthy = is_server_healthy(resolved_port)
 
