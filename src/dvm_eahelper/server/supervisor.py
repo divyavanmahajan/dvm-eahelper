@@ -171,7 +171,10 @@ def run_foreground(
         f"    Health check     → http://{host}:{port}/healthz\n"
         f"    MCP endpoint     → http://{host}:{port}/mcp\n"
         f"{locations}\n"
-        "\nPress Ctrl+C to stop.\n"
+        "\nPress Ctrl+C to stop.\n",
+        # The background daemon redirects stdout to a log file, where it is
+        # block-buffered; without this the banner never reaches the log.
+        flush=True,
     )
 
     uvicorn.run(app, host=host, port=port, log_level="warning")

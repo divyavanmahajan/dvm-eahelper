@@ -551,7 +551,27 @@ def _run_proxy(args: argparse.Namespace) -> None:
     uvicorn.run(app, host=host, port=args.port, log_level="warning")
 
 
+def _force_utf8_output() -> None:
+    """
+    Make stdout/stderr UTF-8 safe.
+
+    CLI output uses arrows, em-dashes and check marks. On Windows these streams
+    default to the ANSI code page (cp1252) whenever they are not a console —
+    piped output, or the log file the background daemon redirects into — and
+    printing the banner then dies with UnicodeEncodeError.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):  # pragma: no cover - detached/closed stream
+            pass
+
+
 def main(argv: list[str] | None = None) -> None:
+    _force_utf8_output()
     parser = build_parser()
     args = parser.parse_args(argv)
 
