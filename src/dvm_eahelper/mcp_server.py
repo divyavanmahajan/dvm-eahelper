@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from dvm_eahelper.config import get_setting
 
@@ -43,17 +43,14 @@ def _read_only_setting(cli_read_only: bool | None = None) -> bool:
     return bool(value)
 
 
-def create_mcp_server(read_only: bool | None = None) -> FastMCP:
-    """Build the FastMCP server instance with get_schema and query tools registered."""
-    mcp = FastMCP(
+def create_mcp_server(read_only: bool | None = None) -> MCPServer:
+    """Build the MCP server instance with get_schema and query tools registered."""
+    mcp = MCPServer(
         name="eahelper",
         instructions=(
             "Tools for querying the eahelper enterprise-architecture graph database "
             "(LeanIX factsheets/relationships loaded into KuzuDB or Neo4j)."
         ),
-        json_response=True,
-        stateless_http=True,
-        streamable_http_path="/",
     )
 
     effective_read_only = _read_only_setting(read_only)

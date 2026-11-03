@@ -3,7 +3,7 @@ name = "dvm-eahelper"
 dynamic = ["version"]
 description = "LeanIX enterprise-architecture helper: GraphQL proxy, factsheet download, and graph loading into KuzuDB or Neo4j"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 license = { text = "MIT" }
 authors = [
     { name = "Divya Van Mahajan", email = "divyavanmahajan@users.noreply.github.com" },
@@ -33,7 +33,7 @@ dependencies = [
     "neo4j>=5.0",
     "python-dotenv>=1.0",
     "pyyaml>=6.0",
-    "mcp>=1.9",
+    "mcp>=2.0",
 ]
 
 [project.urls]

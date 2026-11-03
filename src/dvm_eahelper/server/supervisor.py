@@ -62,7 +62,12 @@ def build_supervisor_app(
         initial_token = load_token(leanix_url)
 
     mcp = create_mcp_server(read_only=mcp_read_only)
-    mcp_asgi_app = mcp.streamable_http_app()
+    # Mounted under /mcp below, so the app serves its endpoint at its own root.
+    mcp_asgi_app = mcp.streamable_http_app(
+        streamable_http_path="/",
+        json_response=True,
+        stateless_http=True,
+    )
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
