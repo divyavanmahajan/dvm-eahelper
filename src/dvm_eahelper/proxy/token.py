@@ -2,7 +2,7 @@
 Extract a Bearer token from a logged-in LeanIX browser session via Playwright CDP.
 
 Usage:
-    1. Launch Chrome/Edge with remote debugging enabled:
+    1. Launch Chrome (preferred) with remote debugging enabled:
        chrome.exe --remote-debugging-port=19222 --user-data-dir=C:\\Temp\\chrome-debug
     2. Log in to LeanIX in that browser window.
     3. Run this module to extract the active access token.
@@ -110,7 +110,7 @@ async def _wait_for_token(
 
     try:
         token = await asyncio.wait_for(captured.get(), timeout=timeout)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise RuntimeError(
             "Timed out waiting for a Bearer token from the browser.\n"
             "Make sure you are logged in to LeanIX in the connected browser."
@@ -147,11 +147,18 @@ async def extract_token(leanix_base: str, cdp_url: str = CDP_URL) -> str:
             raise RuntimeError(
                 f"Could not connect to browser at {cdp_url}.\n"
                 "\n"
-                "IMPORTANT: If Edge/Chrome is already running, launching it again with\n"
+                "IMPORTANT: If the browser is already running, launching it again with\n"
                 "--remote-debugging-port is silently ignored — the flag only works on a\n"
                 "fresh browser process. Use a separate --user-data-dir to force a new\n"
-                "isolated instance that coexists with your normal browser session:\n"
+                "isolated instance that coexists with your normal browser session.\n"
                 "\n"
+                "Chrome (recommended):\n"
+                '  Start-Process "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" `\n'
+                '    "--remote-debugging-port=19222 --user-data-dir=C:\\Temp\\chrome-debug `\n'
+                '     --no-first-run --no-default-browser-check"\n'
+                "\n"
+                "Edge also works, but only if you close ALL existing Edge windows first,\n"
+                "otherwise it ignores the debugging port entirely:\n"
                 '  Start-Process "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" `\n'
                 '    "--remote-debugging-port=19222 --user-data-dir=C:\\Temp\\edge-debug `\n'
                 '     --no-first-run --no-default-browser-check"\n'

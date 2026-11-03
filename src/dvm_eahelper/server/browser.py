@@ -1,5 +1,9 @@
 """
-browser — launch/stop a managed debug browser (Chrome or Edge) for CDP access.
+browser — launch/stop a managed debug browser for CDP access.
+
+Chrome is the default; Edge is used only as a fallback when Chrome is absent
+(or when explicitly selected), because Edge requires all its windows closed
+before it will honour --remote-debugging-port.
 
 Uses a persistent user-data-dir at ~/.eahelper/browser-profile so the user's
 LeanIX login survives across launches. Tracks the PID of a browser process we
@@ -19,6 +23,11 @@ import httpx
 from dvm_eahelper.config import config_dir, get_setting, set_config_value
 
 DEFAULT_CDP_PORT = 19222
+
+# Preference order when no browser is configured explicitly. Chrome first: Edge
+# only honours --remote-debugging-port on a fresh process with no other Edge
+# windows open, which makes it a poor default for CDP token capture.
+BROWSER_PREFERENCE = ("chrome", "edge")
 
 
 def browser_profile_dir() -> Path:
@@ -78,11 +87,13 @@ def discover_browsers() -> dict[str, Path]:
 
 def choose_browser(cli_browser: str | None = None) -> tuple[str, Path]:
     """
-    Decide which browser to launch, following config resolution + platform rules.
+    Decide which browser to launch, following config resolution + preference order.
 
-    On Windows, Edge's CDP support requires the user to close ALL Edge windows
-    first (a well-known limitation), so Chrome is preferred when both are
-    available. If only Edge is available on Windows, warn and (TTY) confirm.
+    Chrome is always the default: Edge silently ignores --remote-debugging-port
+    unless ALL Edge windows are closed first (a well-known limitation), which
+    makes CDP token capture fail in confusing ways. Edge is therefore only used
+    when Chrome is not installed, or when it is asked for explicitly via
+    --browser / EAHELPER_BROWSER / config `browser.browser`.
     """
     found = discover_browsers()
     if not found:
@@ -99,28 +110,30 @@ def choose_browser(cli_browser: str | None = None) -> tuple[str, Path]:
         default="",
     )
 
-    if choice and choice in found:
-        return choice, found[choice]
+    if choice:
+        if choice in found:
+            return choice, found[choice]
+        print(
+            f"  WARNING: configured browser '{choice}' was not found on this machine "
+            f"— falling back to the default preference order."
+        )
 
-    if sys.platform == "win32":
-        if "chrome" in found:
-            chosen = "chrome"
-        else:
-            chosen = "edge"
-            print(
-                "  WARNING: only Microsoft Edge was found. Edge's remote-debugging "
-                "support requires ALL Edge windows to be closed first, or it will "
-                "silently ignore --remote-debugging-port and CDP capture will fail."
-            )
-            if sys.stdin.isatty():
-                answer = input("  Continue with Edge anyway? [y/N]: ").strip().lower()
-                if answer not in ("y", "yes"):
-                    raise RuntimeError(
-                        "Aborted. Install Google Chrome for a smoother experience, "
-                        "or close all Edge windows and retry."
-                    )
-    else:
-        chosen = "chrome" if "chrome" in found else next(iter(found))
+    chosen = next((name for name in BROWSER_PREFERENCE if name in found), next(iter(found)))
+
+    if chosen == "edge":
+        print(
+            "  WARNING: Google Chrome was not found, falling back to Microsoft Edge. "
+            "Edge's remote-debugging support requires ALL Edge windows to be closed "
+            "first, or it will silently ignore --remote-debugging-port and CDP "
+            "capture will fail."
+        )
+        if sys.stdin.isatty():
+            answer = input("  Continue with Edge anyway? [y/N]: ").strip().lower()
+            if answer not in ("y", "yes"):
+                raise RuntimeError(
+                    "Aborted. Install Google Chrome for a smoother experience, "
+                    "or close all Edge windows and retry."
+                )
 
     set_config_value("browser.browser", chosen)
     return chosen, found[chosen]

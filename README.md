@@ -86,8 +86,21 @@ By default, `eahelper server` launches and closes a debug browser automatically
 a LeanIX token is needed, and never touches a browser it didn't start. Pass
 `--keep-browser` (or set `[browser] keep_open = true`) to leave it open.
 
+**Chrome is the default.** Edge is used only as a fallback when Chrome is not
+installed, because Edge silently ignores `--remote-debugging-port` unless every
+other Edge window is closed first, which makes token capture fail in confusing
+ways. To override the choice, set `[browser] browser = "edge"` in
+`~/.eahelper/config.toml` or set `EAHELPER_BROWSER=edge`.
+
 If you prefer to manage the browser yourself, launch it manually and eahelper
 will connect to the existing CDP endpoint instead of starting a new one:
+
+**Windows (PowerShell, Chrome — recommended):**
+
+```powershell
+Start-Process "C:\Program Files\Google\Chrome\Application\chrome.exe" `
+  "--remote-debugging-port=19222 --user-data-dir=C:\Temp\chrome-debug --no-first-run --no-default-browser-check"
+```
 
 **Windows (PowerShell, Edge — requires ALL other Edge windows closed first):**
 
